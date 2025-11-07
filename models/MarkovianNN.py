@@ -55,7 +55,7 @@ class NNLM (nn.Module):
         logits = log_softmax(self.forward(X),dim=1)
 
         #last step: gather the logit for each reference  word
-        return torch.gather(logits,1,Y.unsqueeze(0)).squeeze()
+        return torch.gather(logits,1,Y.unsqueeze(0).T).squeeze()
 
 
     
