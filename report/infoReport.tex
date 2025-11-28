@@ -1,0 +1,118 @@
+
+\documentclass{article}
+
+% Language setting
+% Replace `english' with e.g. `spanish' to change the document language
+\usepackage[english]{babel}
+\usepackage{float}
+\usepackage{parskip} 
+% Set page size and margins
+% Replace `letterpaper' with `a4paper' for UK/EU standard size
+\usepackage[letterpaper,top=2cm,bottom=2cm,left=3cm,right=3cm,marginparwidth=1.75cm]{geometry}
+\usepackage[super,sort&compress]{natbib}
+% Useful packages
+\usepackage{amsmath}
+\usepackage{graphicx}
+\usepackage{booktabs}       
+\usepackage{siunitx}       
+\usepackage[colorlinks=true, allcolors=blue]
+{hyperref}
+
+\title{Information-theoretic length Dependency for different languages}
+\begin{document} 
+
+\section{Introduction}
+The word order of natural languages has been initially characterized by Behagel's laws\citep{Behaghel1909}. These laws state elements that are related to each other tend to be placed close together in a sentence. Until recently, these laws have been summarized as dependency length minimization\citep{Futrell2015,Liu2008,Temperley2007}. Dependency lengths are the distances between linguistic units that are related to each other in a sentence. This theory states that languages had evolved to minimize the sum of these distances so that the users can easily produce and comprehend sentences by reducing cognitive load. It has been shown 37 languages follow this principle\citep{Futrell2015}. \\\\
+One potential explanation for this phenomenon is that human have limited working memory capacity\citep{Hopfield1982}. This limitation forces languages to evolve by placing related words closer to each other, allowing speakers and listeners could easily integrate words and process semantic information from memory. These ideas are known as Dependency length theory (DLT)\citep{Gibson1998}. One key prediction of DLT is the locality effects: longer dependencies leads to longer reading times and vice versa, which has been supported by various psycholinguistic studies\citep{Grodner2005,Vasishth2011}.\\\\
+Recently, information-theoretic approaches has been proposed to formalize the relationship between incremental working memory usages in languages processing and sequential order, known as memory-surprisal tradeoff\citep{Hahn2021}. This theory has shown the ease of comprehension is determined by the resources allocated to store elements (e.g., words) in working memory, hence there exists a tradeoff between memory usage and comprehension difficulty in a corpora of 54 languages by using surprisal (shannon entropy copnditioned on limited memory system). However, it is still unclear how the architecture of different language model model, tokenization methods and the syntatic structures of different languages affect surpisal measures and thus memory-surprisal tradeoff. Here, we aim to investigate these factors by implementing a naive hidden markov model and a simple LSTM network and different tokenization methods on corpora of 10 chosen languages.
+\section{Method}
+\subsection{Architecture and the tokenizer of Language Models}
+Here we implement two different language models: a simple markovian feed-foward neural network language model (NNLM) and a long-short term memory (LSTM) network. 
+
+\subsubsection*{Neural Network Language Model (NNLM)}
+The NNLM recieves a seqeuence of tokens $x=\{w_0, x_1, \dots, x_t\}$ with embeddings $e=\{e_0, e_1, \dots, e_t\}$ as input and compute the proability of the next word given a context window with size $n$: 
+\begin{equation}
+  P(w_t|w_{t-n+1}, \dots, w_{t-1})
+\end{equation}
+The embedding is then passed to a hidden layer:
+\begin{equation}
+  h_t = tanh(W_{inh}e_t + b_{ih})
+\end{equation}
+The resulting hidden state is then passed to an output layer with softmax activation to compute the probability distribution of the next token:
+\begin{equation}
+  P(w_t|w_{t-n+1}, \dots, w_{t-1}) = softmax(W_{out}h_t + b_{out})
+\end{equation}
+The tokenizer used for NNLM is a simple whitespace tokenizer that splits the text into words based on spaces. However, this method is problematic for languages without explicit word boundaries (e.g., Chinese, Japanese). \textbf{(Answer for Exercise1)} In addition, given that NNLM is a next-token preidiction model, only last few tokens are predicted due to the limited size of the sentence. For example, a test sentence with a fixed length $T$ were passed to the model, only the last $T-N+1$ tokens were predicted because the first $N-1$ tokens do not have enough context for a memory window of length $N$. To solve this problem, we padded the begining of each sentence with $N-1$ special tokens \texttt{<pad>} so that all tokens in the sentence could be predicted. Our modification is maded in the \texttt{NgramsLanguageModelDataSet(Dataset)} class in the \texttt{dataloader.py} file.
+\subsubsection*{Long Short-Term Memory (LSTM) Network}
+(breifly describe how we do 3 here)
+\subsubsection*{GPT-2 Model}
+\textbf{(Answer for Exercise2)} To compare the surprisal measures between different tokenization methods, we also used a simplied GPT-2 model with byte-pair encoding (BPE) tokenizer to control for vocabulary and vocabulary size of the model. The GPT-2 model is a transformer-based language model that uses self-attention mechanisms to capture long-range dependencies in text. It is a compact GPT-2 decoder-only transformer with a 256-dimensional embedding space, 4 transformer blocks and a hidden size of 256. Each block contains multi-head self-attention (implemented via Conv1D projections), a 1024-dimensional feedforward MLP with GELU activation and residual connections with layernorm and droptout. A final projection layer maps the hidden states to the vocabularty. \\\\
+The BPE tokenizer splits the text into subword units, allowing the model to handle out-of-vocabulary words and capture morphological information. 
+\subsubsection*{Randomization Protocol of Syntactic Structures}
+(breifly describe how we do exercise 5 here)
+\subsubsection*{Choice of corpora and languages}
+(breifly describe how we do 4 here)
+\subsubsection*{Experimental Procedures}
+(briefly describe how we do exercise 7 here)
+
+\section{Results and Discussion}
+\subsection{Effects of tokenization methods on surprisal measures}
+\textbf{(Answer for Exercise2 Continued)}The GPT-2 use a Byte-Pair Encoding (BPE) tokenizer, which will decompose unknown words into fragments of known tokens, meaning that BPE guarantees any string is tokenizable. In addition, common patterns (e.g., the, ing) become short token sequences but for rare/unseen patterns will stay as small tokens, suggesting that an unkown sequences required longer sequences and therefore giving higher surprisals. For example, if "rareword" is a common pattern in the training corpora, that means this patten can be represented as a single token, hence the surprisal will be $p(rareword|context) = a$. However, if it is less likely, lets say it will be decomposed into $[t_1, t_2, t_3, t_4]$, even the model learns that these tokens are more likely (i.e., $p(t_i) = b > a$), the suprisal will still be larger due to the multiplicative nature of the tokens -- $p(rareword|context)=\prod^n_{i=1}p(t_i) = \sum^n_{i=1} \log p(t_i)$, as shown in Figure~\ref{fig:tokenization_effects}.\\\\
+The properties of BPE make it very difficult to compare two different approaches. To compare them, first an untrained GPT-2 model that has be trained on the same copera and maintain the same vocab. To capture the unknown sequences that has not been shown to GPT-2 tokenizer, we have to align and concatenate the tokens so that it matches the unknown words in the context, and sum their surprisals for comparison. Then a statistical test is required to test if the KL-divergence between two distributions of the surprisals does not arise from chance, which tell us whether the two distributions are different from each other (perhaps a permutation test)\\\\
+To conclude, it is not easy to compare the surprisals between the two distributions as it required sophisticated alignments and design of the GPT-2 and training procedures. From a theoretical point of view, for unknown sequences, most unknown words will recieve a larger surprisal in the case of BPE tokenizer, while the model with a simple \texttt{<unk>} exhibits a more narrower range of surprisal due to weaker dependency of the context.
+\begin{figure}[h]
+  \centering
+  \includegraphics[width=0.8\textwidth]{images/img_2025-11-28-at-18-13-50.png}
+  \caption{The distribution of suprisal for two different tokenization methods: whitespace tokenizer (blue) and byte-pair encoding tokenizer (orange) on English corpus using NNLM and GPT-2 model. The BPE tokenizer results in a more skewed distribution with a longer tail, indicating that it produces higher surprisal values for certain tokens compared to the whitespace tokenizer. This suggests that the choice of tokenization method can impact the surprisal measures obtained from language models.}
+  \label{fig:tokenization_effects}
+\end{figure}
+
+\section{References}
+
+\begin{thebibliography}{9}
+
+\bibitem{Behaghel1909}
+Behaghel, O. Beziehungen zwischen Umfang und Reihenfolge von Satzgliedern.
+\textit{Indogermanische Forschungen} \textbf{25}, 110--142 (1909).
+\bibitem{Futrell2015}
+Futrell, R., Mahowald, K. \& Gibson, E. Large-scale evidence of dependency length minimization in 37 languages.
+\textit{Proc. Natl. Acad. Sci. USA} \textbf{112}, 10336–10341 (2015).
+doi:10.1073/pnas.1502134112.
+\bibitem{Liu2008}
+Liu, H.
+Dependency distance as a metric of language comprehension difficulty.
+\textit{J. Cogn. Sci.} \textbf{9}, 159–191 (2008).
+doi:10.17791/jcs.2008.9.2.159.
+\bibitem{Temperley2007}
+Temperley, D.
+Minimization of dependency length in written English.
+\textit{Cognition} \textbf{105}, 300–333 (2007).
+doi:10.1016/j.cognition.2006.09.011.
+\bibitem{Hopfield1982}
+Hopfield, J. J.
+Neural networks and physical systems with emergent collective computational abilities.
+\textit{Proc. Natl. Acad. Sci. USA} \textbf{79}, 2554–2558 (1982).
+doi:10.1073/pnas.79.8.2554.
+\bibitem{Gibson1998}
+Gibson, E.
+Linguistic complexity: locality of syntactic dependencies.
+\textit{Cognition} \textbf{68}, 1–76 (1998).
+doi:10.1016/S0010-0277(98)00034-1.
+\bibitem{Grodner2005}
+Grodner, D. \& Gibson, E.
+Consequences of the serial nature of linguistic input for sentential complexity.
+\textit{Cogn. Sci.} \textbf{29}, 261–290 (2005).
+doi:10.1207/s15516709cog0000\_7.
+\bibitem{Vasishth2011}
+Vasishth, S. \& Drenhaus, H.
+Locality in German.
+\textit{Dialogue \& Discourse} \textbf{2}, 59–82 (2011).
+doi:10.5087/dad.2011.104.
+\bibitem{Hahn2021}
+Hahn, M., Degen, J. \& Futrell, R.
+Modeling word and morpheme order in natural language as an efficient trade-off of memory and surprisal.
+\textit{Psychol. Rev.} \textbf{128}, 726–756 (2021).
+doi:10.1037/rev0000269.
+\end{thebibliography}
+
+\end{document}
