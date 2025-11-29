@@ -44,14 +44,54 @@ The resulting hidden state is then passed to an output layer with softmax activa
 \end{equation}
 The tokenizer used for NNLM is a simple whitespace tokenizer that splits the text into words based on spaces. However, this method is problematic for languages without explicit word boundaries (e.g., Chinese, Japanese). \textbf{(Answer for Exercise1)} In addition, given that NNLM is a next-token preidiction model, only last few tokens are predicted due to the limited size of the sentence. For example, a test sentence with a fixed length $T$ were passed to the model, only the last $T-N+1$ tokens were predicted because the first $N-1$ tokens do not have enough context for a memory window of length $N$. To solve this problem, we padded the begining of each sentence with $N-1$ special tokens \texttt{<pad>} so that all tokens in the sentence could be predicted. Our modification is maded in the \texttt{NgramsLanguageModelDataSet(Dataset)} class in the \texttt{dataloader.py} file.
 \subsubsection*{Long Short-Term Memory (LSTM) Network}
-(breifly describe how we do 3 here)
+
+\textbf{(Answer for Exercise 3)}
+
+A normal Recurrent Neural Network would predict the next word $w_t$ given its preceding context $(w_1, \dots, w_{t-1})$ by maintaining a hidden state $h_t$ that acts as a memory. However, such a vanilla RNN struggles with long-term dependencies due to instability in the gradient propagation (vanishing/exploding gradients).
+
+So, we rather prefere Long Short-Term Memory networks to address this limitation. LSTM introduces an additional hidden state: a cell state $c_t$ and a system of gates that regulate information flow. This gating mechanism allows LSTMs to selectively retain and discard information, effectively learning long-range dependencies trough the cell state.
+
+In PyTorch, implementing an LSTM-based RNNLM involves an `nn.Embedding` layer to convert token IDs to dense vectors ($x_t$), an `nn.LSTM` module for the recurrent processing (handling $h_t$ and $c_t$ updates), and an `nn.Linear` layer to project the LSTM's final hidden state to a vocabulary-sized output.
+
+The biggest difference between our RNNLM and the previous NNLM we used lies in the way they handle context and memory. The NNLM uses a fixed-size context window of length $n$ and concatenates the embeddings of the $n-1$ preceding words as input for a single forward pass. It treats each prediction as independent, given its immediate $n-1$ left neighbors in the sequence, without carrying any information beyond this window.
+
+On the other hand, our RNNLM processes the input sequence recurrently, which means that it maintains the dynamic hidden state ($h_t$) and  the cell state ($c_t$) that act as a ``memory'' of all preceding tokens in the sequence. This allows the RNNLM to capture much longer dependencies than a fixed window NNLM.
+
+
+The most important challenges when implementing the RNNLM in PyTorch are :
+\begin{itemize}
+    \item Because of their inherent recurrent structure, LSTMs are likely to suffer from gradients issues (exploding or vanishing), breaking calculation during traning with NaN or infinite values. However we haven't faced this issue as we used rather short sequences. In addition,in these condition it can be meaningful to add clipping features when gradients get too big or too small.
+    \item For independent n-grams, as we have been using with our previous model, each n-gram is a fresh sequence. But when we are dealing with continuous sequences, LSTMs have to maintain internal hidden and cell states. Thus, we need to pass these states from the end of one batch as the initial states for the next, which requires subtle handling of the variable sequence lengths and batching.
+    \item These considerations are more real-life issues, but we've been able to run our model as a POC. But because of the recurrent nature of LSTMs, for long sequences, training can be much slower compared to feedforward models.
+\end{itemize}
+
+
 \subsubsection*{GPT-2 Model}
 \textbf{(Answer for Exercise2)} To compare the surprisal measures between different tokenization methods, we also used a simplied GPT-2 model with byte-pair encoding (BPE) tokenizer to control for vocabulary and vocabulary size of the model. The GPT-2 model is a transformer-based language model that uses self-attention mechanisms to capture long-range dependencies in text. It is a compact GPT-2 decoder-only transformer with a 256-dimensional embedding space, 4 transformer blocks and a hidden size of 256. Each block contains multi-head self-attention (implemented via Conv1D projections), a 1024-dimensional feedforward MLP with GELU activation and residual connections with layernorm and droptout. A final projection layer maps the hidden states to the vocabularty. \\\\
 The BPE tokenizer splits the text into subword units, allowing the model to handle out-of-vocabulary words and capture morphological information. 
 \subsubsection*{Randomization Protocol of Syntactic Structures}
 (breifly describe how we do exercise 5 here)
 \subsubsection*{Choice of corpora and languages}
-(breifly describe how we do 4 here)
+
+\textbf{(Answer for Exercise 4)}
+Regarding selection criteria for the corpora, we want to ensure certain things. First, the languages must be present in UD. Second, we want to prioritize languages whose corpora are large enough to estimate language models (though we will be limited by our compute capabilities, so this is more a real life concern). Third, we want to aim for diversity of families and geographic regions to make the results more general.
+
+So we can go for the following UD available languages:
+\begin{itemize}
+    \item \textbf{English} – typologically fairly fixed SVO order.
+    \item \textbf{Spanish} – another SVO, fixed-order example, Romance family.
+    \item \textbf{German} – but typologically more flexible (WALS shows it lacks a single dominant SVO vs.\ SOV) $\rightarrow$ good ``semi-free'' testing case.
+    \item \textbf{Turkish} – typologically strongly SOV/OV (head-final) and relatively more fixed order (though topic-marking allows variation) $\rightarrow$ fixed-order side.
+    \item \textbf{Hungarian} – typologically discourse-configurational with flexible word order $\rightarrow$ good free-order candidate.
+    \item \textbf{Russian} – Slavic, moderately flexible word order (case marking allows alternations) $\rightarrow$ another free-order candidate.
+    \item \textbf{Japanese} – strongly SOV, fairly fixed in canonical word order $\rightarrow$ fixed side.
+    \item \textbf{Finnish} – Uralic language, fairly flexible word order due to rich morphology $\rightarrow$ free-order side.
+    \item \textbf{Arabic (Modern Standard Arabic)} – typologically VSO or SVO depending on dialect; variation makes it interesting $\rightarrow$ flexible side.
+    \item \textbf{Chinese (Mandarin)} – typologically SVO and relatively fixed in major clauses $\rightarrow$ fixed side.
+\end{itemize}
+
+
+
 \subsubsection*{Experimental Procedures}
 (briefly describe how we do exercise 7 here)
 
