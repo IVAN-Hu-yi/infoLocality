@@ -90,8 +90,34 @@ So we can go for the following UD available languages:
     \item \textbf{Chinese (Mandarin)} – typologically SVO and relatively fixed in major clauses $\rightarrow$ fixed side.
 \end{itemize}
 
+\textbf{(Answer for Exercise 5)}
+We studied the provided dependencies.py module and learned its sophisticated approach to preserving dependency structure during randomization. The module offers two methods: shuffle tree() which preserves dependency relationships while randomizing word positions, and shuffle projective() which maintains projectivity constraints. However, for our information locality research, we developed a custom conllu parser.py module to have more direct control over word forms and seamless integration.
+We implemented two complementary randomization strategies to test distinct linguistic hypotheses.
+\begin{itemize}
+	\item The first is complete randomization, where word order is entirely shuffled without preserving any structural information. This serves as the strongest baseline to test Hypothesis H1 (Information Locality): natural language word order is optimized to cluster predictively relevant information locally. If $\text{Surprisal}{\text{natural}} < \text{Surprisal}{\text{random}}$, this demonstrates that word order organization reduces prediction uncertainty, as proposed by Hahn et al. (2021).
+	\item The second strategy is dependency-preserving randomization, inspired by dependencies.py's shuffle tree() method. This tests Hypothesis H2 (Dependency Length Minimization): the optimization in natural language specifically operates by placing syntactically related words closer together (Futrell et al., 2015).
+\end{itemize}
 
+\textbf{(Answer for Exercise 6)}
+For statistical testing, we implemented a permutation test to compare the means of dependency lengths between natural corpora and randomized corpora by shuffling the labels 1000 times. And we make a null hypothesis: the average dependency length in randomized dataset is not different from the natural corpora. After running the permutation test, the null hypothesis has a p-value of 0 across 1000 times and thus we can confirm that the null hypothesis is false, then we accept the alternative hypothesis. Alternative hypothesis: the average dependency length in randomized dataset is significantly different from the natural corpora.
 
+There is a clear and consistent difference. As shown in our results, all languages exhibit **longer** average dependency lengths after word order randomization in 2 ways. Ex: English: 11.01 (natural) → 32.83 (Complete shuffled) — 198\% increase. The evidence that this increased dependency length exists **across all** 10 languages and **different ways of randomization**(Note when we preserved dependency relation, the increased dependency length is **smaller** than the full randominization breaking all relation) strongly supports the hypothesis proposed in the paper: natural language word order is optimized to minimize dependency length, keeping syntactically related words closer together.
+
+In our results, free word order languages **do not** seem to have longer dependency lengths. Ex: Turkish: 8.83 vs English: 11.01. Russian: 60.29 vs German: 60.15. The data shows that free word order languages do not systematically have longer dependency lengths. In fact, Turkish (free order) has one of the shortest dependency lengths, while Spanish (fixed SVO) has the longest.
+The choice of randomization is crucial for drawing valid conclusions. Complete randomization breaks all relations and dependencies without any constraints. This approach can only prove that natural language is better than completely randomized language, which cannot lead to plausible observations. Therefore, the dependency-preserving shuffle (shuffle tree) method maintains structural constraints and respects linguistic dependencies. This makes it a suitable baseline for conducting controlled experiments. For instance, we can systematically manipulate the order of nouns and verbs while preserving dependency relations, allowing us to isolate the effect of word order on dependency length.
+
+In summary: Natural language universally shows **optimized word order** for dependency length minimization, **regardless** of whether the language is classified as "free" or "fixed" word order. The randomization procedure is essential for isolating and identifying this specific optimization principle.
+\begin{figure}[h]
+	\centering
+	\includegraphics[width=0.8\textwidth]{images/ex6_complete_random.png}
+	\caption{Average increase: 341.4\%. Minimum increase: 198.0\% (en). Maximum increase: 576.6\% (jap). P-value range: 0.000 - 0.000 All p-values < 0.05}
+\end{figure}
+
+\begin{figure}[h]
+	\centering
+	\includegraphics[width=0.8\textwidth]{images/ex6_controlled_random.png}
+	\caption{Average increase: 151.7\%. Minimum increase: 41.1\% (en) Maximum increase: 313.9\% (jap). P-value range: 0.000 - 0.000 All p-values < 0.05}
+\end{figure}
 \subsubsection*{Experimental Procedures}
 (briefly describe how we do exercise 7 here)
 
