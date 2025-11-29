@@ -2,7 +2,6 @@
 This module contains code for reading dependency trees from conll files 
 and for shuffling word order in various ways while keeping track of the dependencies
 """
-from math import abs
 from random import shuffle
 
 #DATA REPRESENTATION

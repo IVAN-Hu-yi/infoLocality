@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
 import torch.optim as optim
+from tqdm.auto import tqdm
 
 class RNNLanguageModel(nn.Module):
     def __init__(self, vocab_size, embedding_dim, hidden_dim, num_layers, dropout_prob=0.5):
@@ -51,7 +52,12 @@ class RNNLanguageModel(nn.Module):
 
         for epoch in range(num_epochs):
             total_loss = 0
-            for batch_idx, ngram_batch in enumerate(dataloader):
+            for batch_idx, ngram_batch in tqdm(
+                    enumerate(dataloader), 
+                    total=len(dataloader),
+                    desc=f"Epoch {epoch+1}/{num_epochs}",
+                    leave=True
+                ):
                 # ngram_batch is (batch_size, N)
                 input_tokens = ngram_batch[:, :-1].to(device)
                 target_tokens = ngram_batch[:, -1].to(device)
@@ -70,9 +76,9 @@ class RNNLanguageModel(nn.Module):
                 optimizer.step()
 
             avg_loss = total_loss / len(dataloader)
-            print(f"Epoch {epoch+1}/{num_epochs}, Loss: {avg_loss:.4f}")
+            # print(f"Epoch {epoch+1}/{num_epochs}, Loss: {avg_loss:.4f}")
 
-        print("Training finished!")
+        # print("Training finished!")
 
 # No change needed for __call__ as it implicitly calls forward.
 # The previous __call__ method for NaiveTokenizer is not affected.
