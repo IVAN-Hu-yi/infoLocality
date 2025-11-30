@@ -101,7 +101,7 @@ We implemented two complementary randomization strategies to test distinct lingu
 
 
 \subsubsection*{Experimental Procedures}
-(briefly describe how we do exercise 7 here)
+We trained NNLM and RNNLM models with memory sizes ranging from M=1 to M=16 on three types of corpora: natural (original word order), completely randomized (all structure removed), and dependency-preserved (linear order shuffled but syntactic dependencies maintained). For each language and configuration, we measured average surprisal on a held-out test set (20\% of the data). Models were trained for 16--50 epochs (NNLM) and 40 epochs (RNNLM) using the AdamW optimizer with learning rates of 0.005 (NNLM) and 0.003 (RNNLM). The NNLM used a fixed hidden dimension adjusted proportionally to memory size (hidden\_dim = 64 + memory\_size $\times$ 16), while the RNNLM maintained a constant hidden dimension of 128 across all memory sizes.
 
 \section{Results and Discussion}
 \subsection{Effects of tokenization methods on surprisal measures}
@@ -150,6 +150,73 @@ In summary, natural language universally shows \textbf{optimized word order} for
     \caption{Statistical Summary: Dependency-Preserving Randomization relative to Complete Random. Dep-preserved increase compared to complete random: -44.1\%. Minimum increase: -52.0\% (en). Maximum increase: -38.7\% (jap). All p-values $<$ 0.05.}
 \end{figure}
 
+\subsection{Information Locality: Surprisal as a Function of Memory Size}
+\textbf{(Answer for Exercise 7)}
+
+Information locality tells than in constraint working memory, words close to the next work provide much more useful information than those who are far to the next word. And as memory size increases, the surprisal for the next word should decrase.
+We trained NNLM and RNNLM with varying memory sizes (M = 1 to 16) on natural, completely randomized, and dependency-preserved corpora across all 10 languages. For each configuration, we measured average surprisal on a held-out test set to evaluate how memory size affects predictive uncertainty.
+
+\subsubsection*{Observations}
+
+Figure bellow presents the relationship between memory size and average surprisal across models and corpus types.
+
+\paragraph{NNLM Results:}
+Contrary to the theoretical expectation that longer memory should reduce surprisal (by providing more context), we observe an \textbf{overall increase} in surprisal as memory size grows. Averaging across all 10 languages, the natural corpus shows an increase from 1.29 (M=1) to 1.66 (M=16). This counterintuitive trend holds across all three corpus types (natural, complete random, and dependency-preserved).
+
+\textit{Why does this happen?} As memory size increases, the number of possible n-gram combinations grows exponentially ($V^n$, where $V \approx 3400$ is the vocabulary size), while the training data remains fixed. This creates a severe \textbf{data sparsity} problem: the model encounters many unseen long n-grams during testing, leading to high uncertainty and thus high surprisal. Additionally, the NNLM's architecture—which concatenates embeddings of the past $n$ tokens—suffers from a parameter explosion: the input dimension grows as $\text{emb\_size} \times n$, but the hidden layer capacity remains fixed. This bottleneck prevents the model from effectively learning long-range dependencies.
+
+\paragraph{RNNLM Results:}
+The RNNLM, which processes sequences recurrently via an LSTM, exhibits a more nuanced pattern. Averaging across languages, we observe \textbf{three distinct phases}:
+
+\begin{enumerate}
+    \item \textbf{Phase 1 (M=1 $\to$ M=2):} Surprisal rises sharply from 0.25 to 0.37 (+48\%). This initial increase may reflect the model's struggle to integrate an additional token into its hidden state effectively.
+    
+    \item \textbf{Phase 2 (M=3 $\to$ M=8):} Surprisal plateaus around 1.29--1.33, showing minimal variation. Despite increasing memory size, the model's performance remains stable, suggesting that the LSTM's hidden state saturates and cannot fully exploit the extended context. This may be due to:
+    \begin{itemize}
+        \item \textbf{Limited hidden capacity:} With a fixed hidden dimension (128), the LSTM struggles to encode information from longer sequences.
+        \item \textbf{Gradient issues:} Although LSTMs mitigate vanishing gradients, they can still struggle with very long dependencies, especially with limited training data.
+    \end{itemize}
+    
+    \item \textbf{Phase 3 (M=9 $\to$ M=16):} Surprisal \textbf{declines} from 1.33 (M=8) to 0.66 (M=16).
+\end{enumerate}
+
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{images/surprisal.png}
+    \label{fig:exercise7_main}
+\end{figure}
+
+
+\paragraph{Comparing Across Languages:}
+Figure shows the percentage change in surprisal across three phases for each language. Most languages exhibit positive change in M1$\to$M2 and M2$\to$M8, but several (e.g., Chinese, Turkish, Japanese) show large increases, suggesting language-specific challenges in modeling long dependencies. In the M8$\to$M16 phase, most languages show modest decreases, though the magnitude varies widely.
+
+This heterogeneity complicates cross-linguistic comparison. Fixed vs.\ free word order does not clearly predict surprisal patterns. For instance, Turkish (free word order) shows an extreme 1505\% increase from M=1 to M=16, while Finnish (also flexible) shows a moderate 155.5\% increase. These differences likely reflect:
+\begin{itemize}
+    \item \textbf{Corpus quality and size:} Smaller or less representative corpora hinder model training.
+    \item \textbf{Tokenization mismatch:} Languages with complex morphology or non-Latin scripts suffer more from our simple whitespace tokenizer.
+    \item \textbf{Intrinsic complexity:} Some languages may genuinely require more context for accurate prediction, independent of word order flexibility.
+\end{itemize}
+
+\subsubsection*{Problematics and Limitations}
+
+\paragraph{Is the comparison straightforward?} No. Several challenges arise:
+\begin{enumerate}
+    \item \textbf{Data sparsity:} As memory grows, the effective training data per n-gram shrinks exponentially. This confounds the relationship between memory size and surprisal, making it difficult to isolate the linguistic signal from implementation artifacts.
+    
+    \item \textbf{Model capacity constraints:} Both NNLM and RNNLM use fixed hidden dimensions, which may be insufficient for large memory sizes. Ideally, model capacity should scale with memory to ensure fair comparison.
+    
+    \item \textbf{Training regimen:} We used 16--50 epochs for NNLM and 40 for RNNLM. Large memory sizes may require many more epochs to converge, and early stopping may have prevented some models from reaching optimal performance.
+    
+    \item \textbf{Language-specific factors:} Tokenization, corpus size, morphological complexity, and writing system all vary across languages, making it hard to attribute differences to word order properties alone.
+\end{enumerate}
+
+
+Due to time constraints, we did not perform these tests.
+
+\textbf{Answer for Exercise 8}
+
+It's possible, we have pretrained multilingual models like mBERT, XLM-R, mT5, but there have several challenges. Since the models have already learned language-specific patterns, it's hard to separate "inherent language locality" from "learned bias".
 
 \section{References}
 
