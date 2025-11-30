@@ -80,5 +80,25 @@ class RNNLanguageModel(nn.Module):
 
         # print("Training finished!")
 
+    def evaluate_rnn(self, model, dataloader, device):
+        model.eval()
+        surprisals = []
+
+        with torch.no_grad():
+            for batch in dataloader:
+                input_tokens  = batch[:, :-1].to(device)
+                target_tokens = batch[:, -1].to(device)
+
+                logits, _ = model(input_tokens)
+                log_probs = torch.log_softmax(logits, dim=1)
+
+                # correct surprisal
+                s = - torch.gather(log_probs, 1, target_tokens.unsqueeze(0).T).squeeze()
+                s = s.detach().models.cpu().numpy().tolist()
+                surprisals.extend(s[:])
+        
+        return surprisals
+
+
 # No change needed for __call__ as it implicitly calls forward.
 # The previous __call__ method for NaiveTokenizer is not affected.
