@@ -94,7 +94,7 @@ class RNNLanguageModel(nn.Module):
 
                 # correct surprisal
                 s = - torch.gather(log_probs, 1, target_tokens.unsqueeze(0).T).squeeze()
-                s = s.detach().models.cpu().numpy().tolist()
+                s = s.detach().cpu().numpy().tolist()
                 surprisals.extend(s[:])
         
         return surprisals
