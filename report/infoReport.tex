@@ -90,34 +90,16 @@ So we can go for the following UD available languages:
     \item \textbf{Chinese (Mandarin)} – typologically SVO and relatively fixed in major clauses $\rightarrow$ fixed side.
 \end{itemize}
 
-\textbf{(Answer for Exercise 5)}
-We studied the provided dependencies.py module and learned its sophisticated approach to preserving dependency structure during randomization. The module offers two methods: shuffle tree() which preserves dependency relationships while randomizing word positions, and shuffle projective() which maintains projectivity constraints. However, for our information locality research, we developed a custom conllu parser.py module to have more direct control over word forms and seamless integration.
+\subsubsection*{Randomization Protocol of Syntactic Structures}
+\textbf{(Answer for Exercise 5: Randomization methods)}\\
+By studying the provided script dependencies.py we learned its sophisticated approach to preserving dependency structure during randomization. The module offers two methods: shuffle tree() which preserves dependency relationships while randomizing word positions, and shuffle projective() which maintains projectivity constraints. However, for our information locality research, we developed a custom conllu parser.py module to have more direct control over word forms and seamless integration.
 We implemented two complementary randomization strategies to test distinct linguistic hypotheses.
 \begin{itemize}
 	\item The first is complete randomization, where word order is entirely shuffled without preserving any structural information. This serves as the strongest baseline to test Hypothesis H1 (Information Locality): natural language word order is optimized to cluster predictively relevant information locally. If $\text{Surprisal}{\text{natural}} < \text{Surprisal}{\text{random}}$, this demonstrates that word order organization reduces prediction uncertainty, as proposed by Hahn et al. (2021).
-	\item The second strategy is dependency-preserving randomization, inspired by dependencies.py's shuffle tree() method. This tests Hypothesis H2 (Dependency Length Minimization): the optimization in natural language specifically operates by placing syntactically related words closer together (Futrell et al., 2015).
+	\item The second strategy is dependency-preserving randomization, inspired by dependencies.py's shuffle tree() method. In this randomization method, we shuffle the linear order of the words in a sentence while preserving all original dependency relations. Each token in a dependency tree is associated with two indices: a linear position ID (\textit{tid}) and the position ID of its syntactic head (\textit{head tid}). The algorithm first applies \texttt{random.shuffle()} to the list of linear position IDs, producing a randomized target order. A mapping from old to new positions is then constructed, and each token's head index is updated using this mapping so that all governor--dependent pairs are preserved. This procedure maintains the topology of the dependency tree while altering the surface word order, thereby breaking grammatical word order but retaining the underlying syntactic structure. This dependency-preserving shuffle serves as a controlled baseline for dependency length minimization (DLM) experiments. Compared to fully random shuffling, it provides a more structurally informed contrast condition, as it isolates the effect of linear order independent of the dependency graph itself. This tests Hypothesis H2 (Dependency Length Minimization): the optimization in natural language specifically operates by placing syntactically related words closer together (Futrell et al., 2015).
 \end{itemize}
 
-\textbf{(Answer for Exercise 6)}
-For statistical testing, we implemented a permutation test to compare the means of dependency lengths between natural corpora and randomized corpora by shuffling the labels 1000 times. And we make a null hypothesis: the average dependency length in randomized dataset is not different from the natural corpora. After running the permutation test, the null hypothesis has a p-value of 0 across 1000 times and thus we can confirm that the null hypothesis is false, then we accept the alternative hypothesis. Alternative hypothesis: the average dependency length in randomized dataset is significantly different from the natural corpora.
 
-There is a clear and consistent difference. As shown in our results, all languages exhibit **longer** average dependency lengths after word order randomization in 2 ways. Ex: English: 11.01 (natural) → 32.83 (Complete shuffled) — 198\% increase. The evidence that this increased dependency length exists **across all** 10 languages and **different ways of randomization**(Note when we preserved dependency relation, the increased dependency length is **smaller** than the full randominization breaking all relation) strongly supports the hypothesis proposed in the paper: natural language word order is optimized to minimize dependency length, keeping syntactically related words closer together.
-
-In our results, free word order languages **do not** seem to have longer dependency lengths. Ex: Turkish: 8.83 vs English: 11.01. Russian: 60.29 vs German: 60.15. The data shows that free word order languages do not systematically have longer dependency lengths. In fact, Turkish (free order) has one of the shortest dependency lengths, while Spanish (fixed SVO) has the longest.
-The choice of randomization is crucial for drawing valid conclusions. Complete randomization breaks all relations and dependencies without any constraints. This approach can only prove that natural language is better than completely randomized language, which cannot lead to plausible observations. Therefore, the dependency-preserving shuffle (shuffle tree) method maintains structural constraints and respects linguistic dependencies. This makes it a suitable baseline for conducting controlled experiments. For instance, we can systematically manipulate the order of nouns and verbs while preserving dependency relations, allowing us to isolate the effect of word order on dependency length.
-
-In summary: Natural language universally shows **optimized word order** for dependency length minimization, **regardless** of whether the language is classified as "free" or "fixed" word order. The randomization procedure is essential for isolating and identifying this specific optimization principle.
-\begin{figure}[h]
-	\centering
-	\includegraphics[width=0.8\textwidth]{images/ex6_complete_random.png}
-	\caption{Average increase: 341.4\%. Minimum increase: 198.0\% (en). Maximum increase: 576.6\% (jap). P-value range: 0.000 - 0.000 All p-values < 0.05}
-\end{figure}
-
-\begin{figure}[h]
-	\centering
-	\includegraphics[width=0.8\textwidth]{images/ex6_controlled_random.png}
-	\caption{Average increase: 151.7\%. Minimum increase: 41.1\% (en) Maximum increase: 313.9\% (jap). P-value range: 0.000 - 0.000 All p-values < 0.05}
-\end{figure}
 \subsubsection*{Experimental Procedures}
 (briefly describe how we do exercise 7 here)
 
@@ -126,12 +108,48 @@ In summary: Natural language universally shows **optimized word order** for depe
 \textbf{(Answer for Exercise2 Continued)}The GPT-2 use a Byte-Pair Encoding (BPE) tokenizer, which will decompose unknown words into fragments of known tokens, meaning that BPE guarantees any string is tokenizable. In addition, common patterns (e.g., the, ing) become short token sequences but for rare/unseen patterns will stay as small tokens, suggesting that an unkown sequences required longer sequences and therefore giving higher surprisals. For example, if "rareword" is a common pattern in the training corpora, that means this patten can be represented as a single token, hence the surprisal will be $p(rareword|context) = a$. However, if it is less likely, lets say it will be decomposed into $[t_1, t_2, t_3, t_4]$, even the model learns that these tokens are more likely (i.e., $p(t_i) = b > a$), the suprisal will still be larger due to the multiplicative nature of the tokens -- $p(rareword|context)=\prod^n_{i=1}p(t_i) = \sum^n_{i=1} \log p(t_i)$, as shown in Figure~\ref{fig:tokenization_effects}.\\\\
 The properties of BPE make it very difficult to compare two different approaches. To compare them, first an untrained GPT-2 model that has be trained on the same copera and maintain the same vocab. To capture the unknown sequences that has not been shown to GPT-2 tokenizer, we have to align and concatenate the tokens so that it matches the unknown words in the context, and sum their surprisals for comparison. Then a statistical test is required to test if the KL-divergence between two distributions of the surprisals does not arise from chance, which tell us whether the two distributions are different from each other (perhaps a permutation test)\\\\
 To conclude, it is not easy to compare the surprisals between the two distributions as it required sophisticated alignments and design of the GPT-2 and training procedures. From a theoretical point of view, for unknown sequences, most unknown words will recieve a larger surprisal in the case of BPE tokenizer, while the model with a simple \texttt{<unk>} exhibits a more narrower range of surprisal due to weaker dependency of the context.
-\begin{figure}[h]
+\begin{figure}[H]
   \centering
   \includegraphics[width=0.8\textwidth]{images/img_2025-11-28-at-18-13-50.png}
   \caption{The distribution of suprisal for two different tokenization methods: whitespace tokenizer (blue) and byte-pair encoding tokenizer (orange) on English corpus using NNLM and GPT-2 model. The BPE tokenizer results in a more skewed distribution with a longer tail, indicating that it produces higher surprisal values for certain tokens compared to the whitespace tokenizer. This suggests that the choice of tokenization method can impact the surprisal measures obtained from language models.}
   \label{fig:tokenization_effects}
+
 \end{figure}
+
+\subsection{Observations on artificial corpora randomized}
+\textbf{Answer for Exercise 6}
+
+For statistical testing, we implemented a permutation test to compare the means of dependency lengths between natural corpora and randomized corpora by shuffling the labels 1000 times. The null hypothesis assumes that the average dependency length in the randomized dataset is not different from that in the natural corpora. After running the permutation test, the null hypothesis yielded a p-value of 0 across 1000 iterations, indicating that we can reject the null hypothesis and accept the alternative hypothesis: the average dependency length in the randomized dataset is significantly different from that in the natural corpora.
+
+There is a clear and consistent difference. As shown in our results, all languages exhibit \textbf{longer} average dependency lengths after word order randomization in both methods. For example, in English: 11.01 (natural) $\rightarrow$ 32.83 (complete shuffle) — a 198\% increase. This increase is observed \textbf{across all ten languages} and \textbf{both randomization methods}. Notably, when dependency relations are preserved, the increase in dependency length is \textbf{smaller} than in full randomization, which breaks all relations. These results strongly support the hypothesis proposed in the paper: natural language word order is optimized to minimize dependency length, keeping syntactically related words closer together.
+
+Interestingly, free word order languages do \textbf{not} systematically exhibit longer dependency lengths. For example, Turkish: 8.83 vs. English: 11.01; Russian: 60.29 vs. German: 60.15. In fact, Turkish (a free word order language) has one of the shortest dependency lengths, while Spanish (fixed SVO) has the longest. 
+
+The choice of randomization method is crucial for drawing valid conclusions. Complete randomization breaks all syntactic relations and dependencies without any constraints, which can only show that natural language is better than a completely randomized language but does not allow more nuanced observations. In contrast, dependency-preserving shuffle (shuffle tree) maintains structural constraints and respects linguistic dependencies. This method provides a suitable baseline for controlled experiments, allowing us, for instance, to systematically manipulate the order of nouns and verbs while preserving dependency relations, isolating the effect of word order on dependency length.
+
+Finally, comparing dependency lengths under complete randomization and dependency-preserved randomization reveals a clear cross-linguistic pattern. When a sentence is fully randomized without preserving any syntactic structure, dependency lengths increase dramatically, as expected in a system with no grammatical constraints. In contrast, shuffling only the linear order while preserving original dependency relations leads to a much smaller increase in dependency length.
+
+This contrast suggests that natural languages follow structural regularities that constrain linearization, with dependency structure being one such principled constraint. This raises a broader question: is this locality effect a universal property of language? More specifically, beyond dependency locality, do other syntactic frameworks—such as phrase-structure grammar and constituent-based models—also exhibit some form of locality?
+
+In summary, natural language universally shows \textbf{optimized word order} for dependency length minimization, \textbf{regardless} of whether the language is classified as "free" or "fixed" word order. The choice of randomization procedure is essential for isolating and identifying this specific optimization principle.
+\begin{figure}[H]
+	\centering
+	\includegraphics[width=0.8\textwidth]{images/ex6_complete_random.png}
+	\caption{Average increase: 341.4\%. Minimum increase: 198.0\% (en). Maximum increase: 576.6\% (jap). P-value range: 0.000 - 0.000 All p-values < 0.05}
+\end{figure}
+
+\begin{figure}[H]
+	\centering
+	\includegraphics[width=0.8\textwidth]{images/ex6_controlled_random.png}
+	\caption{Average increase: 151.7\%. Minimum increase: 41.1\% (en) Maximum increase: 313.9\% (jap). P-value range: 0.000 - 0.000 All p-values < 0.05}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\textwidth]{images/ex_6_compare.png}
+    \caption{Statistical Summary: Dependency-Preserving Randomization relative to Complete Random. Dep-preserved increase compared to complete random: -44.1\%. Minimum increase: -52.0\% (en). Maximum increase: -38.7\% (jap). All p-values $<$ 0.05.}
+\end{figure}
+
 
 \section{References}
 
